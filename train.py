@@ -19,12 +19,12 @@ from chainerrl import replay_buffer
 
 from chainerrl.wrappers import atari_wrappers
 
-from q_function import DQNQFunction
+from q_function import DQNQFunction, DuelingQFunction
 from agent import RNDAgent
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='BreakoutNoFrameskip-v4',
+    parser.add_argument('--env', type=str, default='PongNoFrameskip-v4',
                         help='OpenAI Atari domain to perform algorithm on.')
     parser.add_argument('--outdir', type=str, default='results',
                         help='Directory path to save output files.'
@@ -68,8 +68,6 @@ def main():
                         dest='clip_delta', action='store_false')
     parser.add_argument('--num-step-return', type=int, default=1)
     parser.set_defaults(clip_delta=True)
-    parser.add_argument('--agent', type=str, default='DoubleDQN',
-                        choices=['DQN', 'DoubleDQN', 'PAL'])
     parser.add_argument('--logging-level', type=int, default=20,
                         help='Logging level. 10:DEBUG, 20:INFO etc.')
     parser.add_argument('--render', action='store_true', default=False,
@@ -84,6 +82,8 @@ def main():
     parser.add_argument('--checkpoint-frequency', type=int,
                         default=None,
                         help='Frequency at which agents are stored.')
+    parser.add_argument('--dueling', action='store_true', default=False,
+                        help='use dueling dqn')
     args = parser.parse_args()
 
     import logging
@@ -96,7 +96,11 @@ def main():
     train_seed = args.seed
     test_seed = 2 ** 31 - 1 - args.seed
 
-    args.outdir = experiments.prepare_output_dir(args, args.outdir)
+    if args.dueling:
+        name = 'DuelingDQN'
+    else:
+        name = 'DQN'
+    args.outdir = experiments.prepare_output_dir(args, args.outdir, time_format='{}/{}/%Y%m%dT%H%M%S.%f'.format(args.env, name))
     print('Output files are saved in {}'.format(args.outdir))
 
     def make_env(test):
@@ -123,7 +127,10 @@ def main():
 
     n_actions = env.action_space.n
     #q_func = parse_arch(args.arch, n_actions)
-    q_func = DQNQFunction(n_actions,)
+    if args.dueling:
+        q_func = DuelingQFunction(n_actions,)
+    else:
+        q_func = DQNQFunction(n_actions,)
 
     if args.noisy_net_sigma is not None:
         links.to_factorized_noisy(q_func, sigma_scale=args.noisy_net_sigma)
