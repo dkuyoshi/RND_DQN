@@ -130,7 +130,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
 
     saved_attributes = ('model', 'target_model', 'optimizer')
 
-    def __init__(self, q_function, optimizer, replay_buffer, gamma,
+    def __init__(self, q_function, rnd, optimizer, replay_buffer, gamma,
                  explorer, gpu=None, replay_start_size=50000,
                  minibatch_size=32, update_interval=1,
                  target_update_interval=10000, clip_delta=True,
@@ -207,6 +207,9 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             raise ValueError(
                 'Replay start size cannot exceed '
                 'replay buffer capacity.')
+
+        # RNDModelの定義
+        self.rnd = rnd
 
     def sync_target_network(self):
         """Synchronize target network with current network."""

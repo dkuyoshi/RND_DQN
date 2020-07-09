@@ -30,17 +30,12 @@ class CNN(Chain):
         return y
 
 class RNDModel(object):
-    def __init__(self, n_history, n_hidden):
+    def __init__(self, n_history=4, n_hidden=512):
         self.target = CNN(n_history, n_hidden)
         self.predict = CNN(n_history, n_hidden)
 
     def get_instinct_reward(self, x):
         f_target = self.target(x)
-        f_predict = self.target(x)
+        f_predict = self.predict(x)
         instinct_reward = (f_predict - f_target )**2
-
         return instinct_reward
-
-
-
-

@@ -21,6 +21,7 @@ from chainerrl.wrappers import atari_wrappers
 
 from q_function import DQNQFunction, DuelingQFunction
 from agent import RNDAgent
+from rnd_network import RNDModel
 
 def main():
     parser = argparse.ArgumentParser()
@@ -47,7 +48,7 @@ def main():
     parser.add_argument('--arch', type=str, default='doubledqn',
                         choices=['nature', 'nips', 'dueling', 'doubledqn'],
                         help='Network architecture to use.')
-    parser.add_argument('--steps', type=int, default=5 * 10 ** 7,
+    parser.add_argument('--steps', type=int, default=10 ** 7,
                         help='Total number of timesteps to train the agent.')
     parser.add_argument('--max-frames', type=int,
                         default=30 * 60 * 60,  # 30 minutes with 60 fps
@@ -168,8 +169,9 @@ def main():
         # Feature extractor
         return np.asarray(x, dtype=np.float32) / 255
 
+    rnd = RNDModel()
     Agent = RNDAgent
-    agent = Agent(q_func, opt, rbuf, gpu=args.gpu, gamma=0.99,
+    agent = Agent(q_func, rnd, opt, rbuf, gpu=args.gpu, gamma=0.99,
                   explorer=explorer, replay_start_size=args.replay_start_size,
                   target_update_interval=args.target_update_interval,
                   clip_delta=args.clip_delta,
