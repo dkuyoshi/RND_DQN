@@ -6,7 +6,7 @@
 Random Network Distillation (RND)
 +
 Deep Q-Network
-
+(元論文はPPOですが...)
 ## TODO
 
 - [x] model
