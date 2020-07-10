@@ -11,6 +11,7 @@ from chainerrl.misc.copy_param import synchronize_parameters
 from chainerrl.replay_buffer import batch_experiences
 from chainerrl.replay_buffer import batch_recurrent_experiences
 from chainerrl.replay_buffer import ReplayUpdater
+import numpy as np
 
 def compute_value_loss(y, t, clip_delta=True, batch_accumulator='mean'):
     """Compute a loss for value prediction problem.
@@ -130,7 +131,8 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
 
     saved_attributes = ('model', 'target_model', 'optimizer')
 
-    def __init__(self, q_function, rnd, optimizer, replay_buffer, gamma,
+    def __init__(self, q_function, rnd, optimizer, opt_rnd, replay_buffer, gamma,
+                 gamma_i,
                  explorer, gpu=None, replay_start_size=50000,
                  minibatch_size=32, update_interval=1,
                  target_update_interval=10000, clip_delta=True,
@@ -155,7 +157,9 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         self.xp = self.model.xp
         self.replay_buffer = replay_buffer
         self.optimizer = optimizer
+        self.opt_rnd = opt_rnd
         self.gamma = gamma
+        self.gamma_i = gamma_i
         self.explorer = explorer
         self.gpu = gpu
         self.target_update_interval = target_update_interval
@@ -237,7 +241,8 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
                 For DQN, each dict must contains:
                   - state (object): State
                   - action (object): Action
-                  - reward (float): Reward
+                  - reward (float):  Extrinsic Reward
+                  - reward_i (float): Intrinsic Reward
                   - is_state_terminal (bool): True iff next state is terminal
                   - next_state (object): Next state
                   - weight (float, optional): Weight coefficient. It can be
@@ -249,9 +254,10 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             None
         """
         has_weight = 'weight' in experiences[0][0]
-        exp_batch = batch_experiences(
+        exp_batch = self.batch_experiences_rnd(
             experiences, xp=self.xp,
             phi=self.phi, gamma=self.gamma,
+            gamma_i=self.gamma_i ,
             batch_states=self.batch_states)
         if has_weight:
             exp_batch['weights'] = self.xp.asarray(
@@ -267,9 +273,15 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         self.average_loss *= self.average_loss_decay
         self.average_loss += (1 - self.average_loss_decay) * float(loss.array)
 
+        # Modelの更新
         self.model.cleargrads()
         loss.backward()
         self.optimizer.update()
+
+        # PredictionModelの更新
+        self.rnd.predict.cleargrands()
+        exp_batch['reward_i'].background()
+        self.opt_rnd.update()
 
     def update_from_episodes(self, episodes, errors_out=None):
         assert errors_out is None,\
@@ -299,10 +311,13 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         next_q_max = target_next_qout.max
 
         batch_rewards = exp_batch['reward']
+        batch_rewards_i = exp_batch['reward_i']
         batch_terminal = exp_batch['is_state_terminal']
         discount = exp_batch['discount']
+        discount_i = exp_batch['discount_i']
+        R = batch_rewards + batch_rewards_i
 
-        return batch_rewards + discount * (1.0 - batch_terminal) * next_q_max
+        return R + (discount+discount_i)/2 * (1.0 - batch_terminal) * next_q_max
 
     def _compute_y_and_t(self, exp_batch):
         batch_size = exp_batch['reward'].shape[0]
@@ -374,7 +389,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         self.logger.debug('t:%s q:%s action_value:%s', self.t, q, action_value)
         return action
 
-    def act_and_train(self, obs, reward):
+    def act_and_train(self, obs, reward, reward_i):
 
         # Observe the consequences
         if self.last_state is not None:
@@ -384,6 +399,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
                 'state': self.last_state,
                 'action': self.last_action,
                 'reward': reward,
+                'reward_i': reward_i,
                 'next_state': obs,
                 'is_state_terminal': False,
             }
@@ -527,7 +543,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
                     recurrent_states=self.test_recurrent_states,
                 )
 
-    def stop_episode_and_train(self, state, reward, done=False):
+    def stop_episode_and_train(self, state, reward, reward_i, done=False):
         """Observe a terminal state and a reward.
 
         This function must be called once when an episode terminates.
@@ -541,6 +557,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             'state': self.last_state,
             'action': self.last_action,
             'reward': reward,
+            'reward_i': reward_i,
             'next_state': state,
             'next_action': self.last_action,
             'is_state_terminal': done,
@@ -571,3 +588,51 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             ('average_loss', self.average_loss),
             ('n_updates', self.optimizer.t),
         ]
+
+    def batch_experiences_rnd(experiences, xp, phi, gamma, gamma_i, batch_states=batch_states):
+        """Takes a batch of k experiences each of which contains j
+        consecutive transitions and vectorizes them, where j is between 1 and n.
+        Args:
+            experiences: list of experiences. Each experience is a list
+                containing between 1 and n dicts containing
+                  - state (object): State
+                  - action (object): Action
+                  - reward (float): Reward
+                  - is_state_terminal (bool): True iff next state is terminal
+                  - next_state (object): Next state
+            xp : Numpy compatible matrix library: e.g. Numpy or CuPy.
+            phi : Preprocessing function
+            gamma: discount factor
+            batch_states: function that converts a list to a batch
+        Returns:
+            dict of batched transitions
+        """
+
+        batch_exp = {
+            'state': batch_states(
+                [elem[0]['state'] for elem in experiences], xp, phi),
+            'action': xp.asarray([elem[0]['action'] for elem in experiences]),
+            'reward': xp.asarray([sum((gamma ** i) * exp[i]['reward']
+                                      for i in range(len(exp)))
+                                  for exp in experiences],
+                                 dtype=np.float32),
+            'reward_i': xp.asarray([sum((gamma_i ** i) * exp[i]['reward_i']
+                                      for i in range(len(exp)))
+                                  for exp in experiences],
+                                 dtype=np.float32),
+            'next_state': batch_states(
+                [elem[-1]['next_state']
+                 for elem in experiences], xp, phi),
+            'is_state_terminal': xp.asarray(
+                [any(transition['is_state_terminal']
+                     for transition in exp) for exp in experiences],
+                dtype=np.float32),
+            'discount': xp.asarray([(gamma ** len(elem)) for elem in experiences],
+                                   dtype=np.float32),
+            'discount_i': xp.asarray([(gamma_i ** len(elem)) for elem in experiences],
+                                   dtype=np.float32),
+            }
+        if all(elem[-1]['next_action'] is not None for elem in experiences):
+            batch_exp['next_action'] = xp.asarray(
+                [elem[-1]['next_action'] for elem in experiences])
+        return batch_exp

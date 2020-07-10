@@ -7,6 +7,7 @@ from chainerrl.action_value import DiscreteActionValue
 from chainerrl.q_function import StateQFunction
 from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl.links import FactorizedNoisyLinear
+import numpy as np
 
 class CNN(Chain):
     def __init__(self, n_history=4, n_hidden=512):
@@ -37,5 +38,5 @@ class RNDModel(object):
     def get_instinct_reward(self, x):
         f_target = self.target(x)
         f_predict = self.predict(x)
-        instinct_reward = (f_predict - f_target )**2
+        instinct_reward = np.sqrt(np.sum((f_predict.array - f_target.array)**2))
         return instinct_reward

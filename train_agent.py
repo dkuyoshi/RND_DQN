@@ -26,11 +26,13 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
     logger = logger or logging.getLogger(__name__)
 
     episode_r = 0
+    episode_ir = 0
     episode_idx = 0
 
     # o_0, r_0
     obs = env.reset()
     r = 0
+    it = 0
 
     t = step_offset
     if hasattr(agent, 't'):
@@ -39,13 +41,15 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
     episode_len = 0
     try:
         while t < steps:
-
             # a_t
-            action = agent.act_and_train(obs, r)
+            action = agent.act_and_train(obs, r, it)
             # o_{t+1}, r_{t+1}
             obs, r, done, info = env.step(action)
+            state = agent.batch_states([obs], agent.xp, agent.phi)
+            it = agent.rnd.get_instinct_reward(state)
             t += 1
             episode_r += r
+            episode_ir += it
             episode_len += 1
 
             for hook in step_hooks:
@@ -54,9 +58,9 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
             reset = (episode_len == max_episode_len
                      or info.get('needs_reset', False))
             if done or reset or t == steps:
-                agent.stop_episode_and_train(obs, r, done=done)
-                logger.info('outdir:%s step:%s episode:%s R:%s',
-                            outdir, t, episode_idx, episode_r)
+                agent.stop_episode_and_train(obs, r, it, done=done)
+                logger.info('outdir:%s step:%s episode:%s r:%s i:%s',
+                            outdir, t, episode_idx, episode_r, episode_ir)
                 logger.info('statistics:%s', agent.get_statistics())
                 if evaluator is not None:
                     evaluator.evaluate_if_necessary(
@@ -68,10 +72,12 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
                     break
                 # Start a new episode
                 episode_r = 0
+                episode_ir = 0
                 episode_idx += 1
                 episode_len = 0
                 obs = env.reset()
                 r = 0
+                it = 0
             if checkpoint_freq and t % checkpoint_freq == 0:
                 save_agent(agent, t, outdir, logger, suffix='_checkpoint')
 

@@ -22,6 +22,7 @@ from chainerrl.wrappers import atari_wrappers
 from q_function import DQNQFunction, DuelingQFunction
 from agent import RNDAgent
 from rnd_network import RNDModel
+from train_agent import train_agent_with_evaluation
 
 def main():
     parser = argparse.ArgumentParser()
@@ -151,6 +152,7 @@ def main():
     # Use the Nature paper's hyperparameters
     opt = optimizers.RMSpropGraves(
         lr=args.lr, alpha=0.95, momentum=0.0, eps=1e-2)
+    opt_rnd = optimizers.Adam()
 
     opt.setup(q_func)
 
@@ -171,7 +173,8 @@ def main():
 
     rnd = RNDModel()
     Agent = RNDAgent
-    agent = Agent(q_func, rnd, opt, rbuf, gpu=args.gpu, gamma=0.99,
+    agent = Agent(q_func, rnd, opt, opt_rnd, rbuf, gpu=args.gpu, gamma=0.99,
+                  gamma_i=0.99,
                   explorer=explorer, replay_start_size=args.replay_start_size,
                   target_update_interval=args.target_update_interval,
                   clip_delta=args.clip_delta,
@@ -192,7 +195,7 @@ def main():
             args.eval_n_runs, eval_stats['mean'], eval_stats['median'],
             eval_stats['stdev']))
     else:
-        experiments.train_agent_with_evaluation(
+        train_agent_with_evaluation(
             agent=agent, env=env, steps=args.steps,
             eval_n_steps=None,
             checkpoint_freq=args.checkpoint_frequency,
