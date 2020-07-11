@@ -8,7 +8,7 @@ Random Network Distillation (RND)
 Deep Q-Network
 (元論文はPPOですが...)
 
-## Usage
+## Requirement
 
 chainerrl==0.8.0
 
