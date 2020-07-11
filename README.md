@@ -7,6 +7,14 @@ Random Network Distillation (RND)
 +
 Deep Q-Network
 (元論文はPPOですが...)
+
+## Usage
+
+chainerrl==0.8.0
+
+chainer==7.4.0
+
+[chainerのgithub](https://github.com/chainer)
 ## TODO
 
 - [x] model
