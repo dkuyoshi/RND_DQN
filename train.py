@@ -134,6 +134,8 @@ def main():
     else:
         q_func = DQNQFunction(n_actions,)
 
+    rnd = RNDModel()
+
     if args.noisy_net_sigma is not None:
         links.to_factorized_noisy(q_func, sigma_scale=args.noisy_net_sigma)
         # Turn off explorer
@@ -149,12 +151,12 @@ def main():
         [q_func(np.zeros((4, 84, 84), dtype=np.float32)[None])],
         os.path.join(args.outdir, 'model'))
 
-    # Use the Nature paper's hyperparameters
-    opt = optimizers.RMSpropGraves(
-        lr=args.lr, alpha=0.95, momentum=0.0, eps=1e-2)
+    # Adam
+    opt = optimizers.Adam()
     opt_rnd = optimizers.Adam()
 
     opt.setup(q_func)
+    opt_rnd.setup(rnd.predict)
 
     # Select a replay buffer to use
     if args.prioritized:
@@ -171,7 +173,10 @@ def main():
         # Feature extractor
         return np.asarray(x, dtype=np.float32) / 255
 
-    rnd = RNDModel()
+    def phi_rnd(x):
+        return np.asarray(x, )
+        
+
     Agent = RNDAgent
     agent = Agent(q_func, rnd, opt, opt_rnd, rbuf, gpu=args.gpu, gamma=0.99,
                   gamma_i=0.99,

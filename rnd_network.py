@@ -38,5 +38,6 @@ class RNDModel(object):
     def get_instinct_reward(self, x):
         f_target = self.target(x)
         f_predict = self.predict(x)
+        # L2ノルム
         instinct_reward = np.sqrt(np.sum((f_predict.array - f_target.array)**2))
         return instinct_reward
