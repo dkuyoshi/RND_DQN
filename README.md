@@ -19,7 +19,7 @@ Deep Q-Network
 - [ ] reward normalization : In order to keep the rewards on a consistent scale we normalized the intrinsic reward by dividing it by a running estimate of the standard deviations of the intrinsic returns. 
 - [ ]  observation normalization : we whiten each dimension by subtracting the running mean and then dividing by the running standard deviation. We then clip the normalized observations to be between -5 and 5. We initialize the normalization parameters by stepping a random agent in the environment for a small number of steps before beginning optimization. We use the same observation normalization for both predictor and target networks but not the policy network.
 
-![Hyper](/Users/dkuyoshi/学校関係/image.png "Hyperparameter for normalization")
+![Hyper](https://github.com/dkuyoshi/RND_DQN/blob/master/images/image.png "Hyperparameter for normalization")
 [Exploration by Random Network Distillation](https://arxiv.org/pdf/1810.12894.pdf)より引用
 
 などいっぱい
