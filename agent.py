@@ -257,7 +257,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         exp_batch = self.batch_experiences_rnd(
             experiences, xp=self.xp,
             phi=self.phi, gamma=self.gamma,
-            gamma_i=self.gamma_i ,
+            gamma_i=self.gamma_i,
             batch_states=self.batch_states)
         if has_weight:
             exp_batch['weights'] = self.xp.asarray(
@@ -589,7 +589,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             ('n_updates', self.optimizer.t),
         ]
 
-    def batch_experiences_rnd(experiences, xp, phi, gamma, gamma_i, batch_states=batch_states):
+    def batch_experiences_rnd(self, experiences, xp, phi, gamma, gamma_i, batch_states=batch_states):
         """Takes a batch of k experiences each of which contains j
         consecutive transitions and vectorizes them, where j is between 1 and n.
         Args:
@@ -636,3 +636,6 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             batch_exp['next_action'] = xp.asarray(
                 [elem[-1]['next_action'] for elem in experiences])
         return batch_exp
+
+    def phi_rnd(self, x):
+        return np.asarray(x, dtype=np.float32) / 255

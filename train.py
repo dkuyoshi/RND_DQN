@@ -173,10 +173,6 @@ def main():
         # Feature extractor
         return np.asarray(x, dtype=np.float32) / 255
 
-    def phi_rnd(x):
-        return np.asarray(x, )
-        
-
     Agent = RNDAgent
     agent = Agent(q_func, rnd, opt, opt_rnd, rbuf, gpu=args.gpu, gamma=0.99,
                   gamma_i=0.99,
