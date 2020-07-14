@@ -13,6 +13,9 @@ from chainerrl.replay_buffer import batch_recurrent_experiences
 from chainerrl.replay_buffer import ReplayUpdater
 import numpy as np
 
+from normalization import UpdateMeanStd
+
+
 def compute_value_loss(y, t, clip_delta=True, batch_accumulator='mean'):
     """Compute a loss for value prediction problem.
 
@@ -70,6 +73,7 @@ def compute_weighted_value_loss(y, t, weights,
     elif batch_accumulator == 'sum':
         loss = loss_sum
     return loss
+
 
 def _batch_reset_recurrent_states_when_episodes_end(
         model, batch_done, batch_reset, recurrent_states):
@@ -137,6 +141,8 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
                  minibatch_size=4, update_interval=1,
                  target_update_interval=10000, clip_delta=True,
                  phi=lambda x: x,
+                 phi_rnd=lambda x: x,
+                 pre_steps=128,
                  target_update_method='hard',
                  soft_update_tau=1e-2,
                  n_times_update=1, average_q_decay=0.999,
@@ -165,6 +171,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         self.target_update_interval = target_update_interval
         self.clip_delta = clip_delta
         self.phi = phi
+        self.phi_rnd = phi_rnd
         self.target_update_method = target_update_method
         self.soft_update_tau = soft_update_tau
         self.batch_accumulator = batch_accumulator
@@ -214,6 +221,13 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
 
         # RNDModelの定義
         self.rnd = rnd
+
+        # Update normalization classの定義
+        self.obs_norm = UpdateMeanStd(shape=(1, 4, 84, 84))
+        self.r_norm = UpdateMeanStd()
+
+        # observation正規化のチューニング期間
+        self.pre_steps = pre_steps
 
     def sync_target_network(self):
         """Synchronize target network with current network."""
@@ -638,5 +652,3 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
                 [elem[-1]['next_action'] for elem in experiences])
         return batch_exp
 
-    def phi_rnd(self, x):
-        return np.asarray(np.clip((x- np.average(x))/np.std(x), -5, 5), dtype=np.float32)

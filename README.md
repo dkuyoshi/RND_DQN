@@ -40,5 +40,11 @@ chainer==7.4.0
 
 などいっぱい
 
+## Usage
+`python train.py`
+
+- --no_rnd : 普通のDQNでtrain(RNDを使用しない)
+- --dueling :　Dueling Networkを用いる
+
 
 

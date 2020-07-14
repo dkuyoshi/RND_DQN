@@ -86,6 +86,10 @@ def main():
                         help='Frequency at which agents are stored.')
     parser.add_argument('--dueling', action='store_true', default=False,
                         help='use dueling dqn')
+    parser.add_argument('--normalization_pre_steps', type=int, default=128,
+                        help='steps for initializing the normalization parameters')
+    parser.add_argument('no_rnd', action='store_true', default=False,
+                        help='simple dqn training')
     args = parser.parse_args()
 
     import logging
@@ -100,8 +104,13 @@ def main():
 
     if args.dueling:
         name = 'DuelingDQN'
+        if args.no_rnd:
+            name = 'SimpleDuelingDQN'
     else:
         name = 'DQN'
+        if args.no_rnd:
+            name = 'SimpleDQN'
+
     args.outdir = experiments.prepare_output_dir(args, args.outdir, time_format='{}/{}/%Y%m%dT%H%M%S.%f'.format(args.env, name))
     print('Output files are saved in {}'.format(args.outdir))
 
@@ -173,15 +182,30 @@ def main():
         # Feature extractor
         return np.asarray(x, dtype=np.float32) / 255
 
-    Agent = RNDAgent
-    agent = Agent(q_func, rnd, opt, opt_rnd, rbuf, gpu=args.gpu, gamma=0.99,
-                  gamma_i=0.99,
-                  explorer=explorer, replay_start_size=args.replay_start_size,
-                  target_update_interval=args.target_update_interval,
-                  clip_delta=args.clip_delta,
-                  update_interval=args.update_interval,
-                  batch_accumulator='mean',
-                  phi=phi)
+    def phi_rnd(x):
+        return np.asarray(np.clip((x- np.average(x))/np.std(x), -5, 5), dtype=np.float32)
+
+    if not args.no_rnd:
+        Agent = agents.DQN
+        agent = Agent(q_func, opt, rbuf, gpu=args.gpu, gamma=0.99,
+                      explorer=explorer, replay_start_size=args.replay_start_size,
+                      target_update_interval=args.target_update_interval,
+                      clip_delta=args.clip_delta,
+                      update_interval=args.update_interval,
+                      batch_accumulator='sum',
+                      phi=phi)
+    else:
+        Agent = RNDAgent
+        agent = Agent(q_func, rnd, opt, opt_rnd, rbuf, gpu=args.gpu, gamma=0.99,
+                      gamma_i=0.99,
+                      explorer=explorer, replay_start_size=args.replay_start_size,
+                      target_update_interval=args.target_update_interval,
+                      clip_delta=args.clip_delta,
+                      update_interval=args.update_interval,
+                      batch_accumulator='mean',
+                      phi=phi,
+                      phi_rnd=phi_rnd,
+                      pre_steps=args.normalization_pre_steps)
 
     if args.load:
         agent.load(args.load)
@@ -196,16 +220,28 @@ def main():
             args.eval_n_runs, eval_stats['mean'], eval_stats['median'],
             eval_stats['stdev']))
     else:
-        train_agent_with_evaluation(
-            agent=agent, env=env, steps=args.steps,
-            eval_n_steps=None,
-            checkpoint_freq=args.checkpoint_frequency,
-            eval_n_episodes=args.eval_n_runs,
-            eval_interval=args.eval_interval,
-            outdir=args.outdir,
-            save_best_so_far_agent=False,
-            eval_env=eval_env,
-        )
+        if not args.no_rnd:
+            experiments.train_agent_with_evaluation(
+                agent=agent, env=env, steps=args.steps,
+                eval_n_steps=None,
+                checkpoint_freq=args.checkpoint_frequency,
+                eval_n_episodes=args.eval_n_runs,
+                eval_interval=args.eval_interval,
+                outdir=args.outdir,
+                save_best_so_far_agent=False,
+                eval_env=eval_env,
+            )
+        else:
+            train_agent_with_evaluation(
+                agent=agent, env=env, steps=args.steps,
+                eval_n_steps=None,
+                checkpoint_freq=args.checkpoint_frequency,
+                eval_n_episodes=args.eval_n_runs,
+                eval_interval=args.eval_interval,
+                outdir=args.outdir,
+                save_best_so_far_agent=False,
+                eval_env=eval_env,
+            )
 
 if __name__ == '__main__':
     main()
