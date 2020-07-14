@@ -54,7 +54,7 @@ def main():
     parser.add_argument('--max-frames', type=int,
                         default=30 * 60 * 60,  # 30 minutes with 60 fps
                         help='Maximum number of frames for each episode.')
-    parser.add_argument('--replay-start-size', type=int, default=5 * 10 ** 4,
+    parser.add_argument('--replay-start-size', type=int, default=5,
                         help='Minimum replay buffer size before ' +
                         'performing gradient updates.')
     parser.add_argument('--target-update-interval',
@@ -135,7 +135,7 @@ def main():
         q_func = DQNQFunction(n_actions,)
 
     rnd = RNDModel()
-
+    #rnd_func = rnd.predict
     if args.noisy_net_sigma is not None:
         links.to_factorized_noisy(q_func, sigma_scale=args.noisy_net_sigma)
         # Turn off explorer
@@ -180,7 +180,7 @@ def main():
                   target_update_interval=args.target_update_interval,
                   clip_delta=args.clip_delta,
                   update_interval=args.update_interval,
-                  batch_accumulator='sum',
+                  batch_accumulator='mean',
                   phi=phi)
 
     if args.load:

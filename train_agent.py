@@ -45,7 +45,7 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
             action = agent.act_and_train(obs, r, it)
             # o_{t+1}, r_{t+1}
             obs, r, done, info = env.step(action)
-            state = agent.batch_states([obs], agent.xp, agent.phi)
+            state = agent.batch_states([obs], agent.xp, agent.phi_rnd)
             it = agent.rnd.get_instinct_reward(state)
             t += 1
             episode_r += r

@@ -2,7 +2,7 @@ import copy
 from logging import getLogger
 
 import chainer
-from chainer import cuda
+from chainer import cuda, Variable
 import chainer.functions as F
 
 from chainerrl import agent
@@ -134,7 +134,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
     def __init__(self, q_function, rnd, optimizer, opt_rnd, replay_buffer, gamma,
                  gamma_i,
                  explorer, gpu=None, replay_start_size=50000,
-                 minibatch_size=32, update_interval=1,
+                 minibatch_size=4, update_interval=1,
                  target_update_interval=10000, clip_delta=True,
                  phi=lambda x: x,
                  target_update_method='hard',
@@ -266,6 +266,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             if errors_out is None:
                 errors_out = []
         loss = self._compute_loss(exp_batch, errors_out=errors_out)
+        loss_i = F.average(exp_batch['reward_i'])
         if has_weight:
             self.replay_buffer.update_errors(errors_out)
 
@@ -279,8 +280,8 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         self.optimizer.update()
 
         # PredictionModelの更新
-        self.rnd.predict.cleargrands()
-        exp_batch['reward_i'].background()
+        self.rnd.predict.cleargrads()
+        loss_i.backward()
         self.opt_rnd.update()
 
     def update_from_episodes(self, episodes, errors_out=None):
@@ -638,4 +639,4 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         return batch_exp
 
     def phi_rnd(self, x):
-        return np.asarray(x, dtype=np.float32) / 255
+        return np.asarray(np.clip((x- np.average(x))/np.std(x), -5, 5), dtype=np.float32)

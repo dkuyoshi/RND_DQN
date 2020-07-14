@@ -8,6 +8,7 @@ from chainerrl.q_function import StateQFunction
 from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl.links import FactorizedNoisyLinear
 
+
 class DQNQFunction(Chain):
     def __init__(self, n_action, n_history=4, n_hidden=512):
         super().__init__()
@@ -28,6 +29,7 @@ class DQNQFunction(Chain):
         h = F.relu(self.l1(h))
         y = self.l2(h)
         return DiscreteActionValue(y)
+
 
 class DuelingQFunction(Chain):
     def __init__(self, n_action, n_history=4, n_hidden=512):

@@ -9,6 +9,7 @@ from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl.links import FactorizedNoisyLinear
 import numpy as np
 
+
 class CNN(Chain):
     def __init__(self, n_history=4, n_hidden=512):
         super().__init__()
@@ -29,6 +30,7 @@ class CNN(Chain):
         h = F.relu(self.l1(h))
         y = self.l2(h)
         return y
+
 
 class RNDModel(object):
     def __init__(self, n_history=4, n_hidden=512):

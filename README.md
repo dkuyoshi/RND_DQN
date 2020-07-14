@@ -26,7 +26,7 @@ chainer==7.4.0
 ## チューニングが厄介？
 - [ ] reward normalization : In order to keep the rewards on a consistent scale we normalized the intrinsic reward by dividing it by a running estimate of the standard deviations of the intrinsic returns.
 
-(報酬を一定のスケールに保つために、内部報酬の標準偏差の現在の推定値で割ることにより、内部報酬を正規化報酬を一定のスケールに保つために、内部報酬の標準偏差の現在の推定値で割ることにより、内部報酬を正規化)
+(報酬を一定のスケールに保つために、内部報酬の標準偏差の現在の推定値で割ることにより、内部報酬を正規化)
 - [ ]  observation normalization : we whiten each dimension by subtracting the running mean and then dividing by the running standard deviation. We then clip the normalized observations to be between -5 and 5. We initialize the normalization parameters by stepping a random agent in the environment for a small number of steps before beginning optimization. We use the same observation normalization for both predictor and target networks but not the policy network.
 
 (実行中の平均を差し引き、次に実行中の標準偏差で割ることにより、各次元を白くします。 次に、正規化された観測値を-5から5の間になるようにクリップします。最適化を開始する前に、環境内でランダムエージェントを少ないステップ数だけステップ実行して、正規化パラメーターを初期化します。 予測ネットワークとターゲットネットワークの両方に同じ観測正規化を使用しますが、ポリシーネットワークは使用せず。)
@@ -35,3 +35,5 @@ chainer==7.4.0
 [Exploration by Random Network Distillation](https://arxiv.org/pdf/1810.12894.pdf)より引用
 
 などいっぱい
+
+## とりあえずaction->updateは動いたぜ
