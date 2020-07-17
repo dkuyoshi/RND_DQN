@@ -4,6 +4,7 @@ import os
 from chainerrl.experiments.evaluator import Evaluator
 from chainerrl.experiments.evaluator import save_agent
 from chainerrl.misc.ask_yes_no import ask_yes_no
+import numpy as np
 
 
 def save_agent_replay_buffer(agent, t, outdir, suffix='', logger=None):
@@ -39,6 +40,18 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
         agent.t = step_offset
 
     episode_len = 0
+
+    # normalize obs
+    print('Start to initialize observation normalization parameter q(^_^)p ')
+    for step in range(agent.pre_steps):
+        obs_no_stack = []
+        action = np.random.randint(0, agent.n_action)
+        obs, r, done, info = env.step(action)
+        # obs_no_stack.append(obs[3, :, :].reshape(1, 84, 84))
+        # obs = np.stack(obs_no_stack)
+        agent.obs_norm.update(agent.batch_states([obs], agent.xp, agent.phi_i))
+    print('End to initialize !!(^_^)!! ')
+
     try:
         while t < steps:
             # a_t
@@ -47,6 +60,7 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
             obs, r, done, info = env.step(action)
             state = agent.batch_states([obs], agent.xp, agent.phi_rnd)
             it = agent.rnd.get_instinct_reward(state)
+            agent.r_norm.update(it)
             t += 1
             episode_r += r
             episode_ir += it

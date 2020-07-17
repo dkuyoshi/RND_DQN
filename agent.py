@@ -13,7 +13,7 @@ from chainerrl.replay_buffer import batch_recurrent_experiences
 from chainerrl.replay_buffer import ReplayUpdater
 import numpy as np
 
-from normalization import UpdateMeanStd
+from normalization import UpdateMeanStd, UpdateMeanStdR
 
 
 def compute_value_loss(y, t, clip_delta=True, batch_accumulator='mean'):
@@ -137,11 +137,12 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
 
     def __init__(self, q_function, rnd, optimizer, opt_rnd, replay_buffer, gamma,
                  gamma_i,
+                 n_action,
                  explorer, gpu=None, replay_start_size=50000,
                  minibatch_size=4, update_interval=1,
                  target_update_interval=10000, clip_delta=True,
                  phi=lambda x: x,
-                 phi_rnd=lambda x: x,
+                 phi_i=lambda x: x,
                  pre_steps=128,
                  target_update_method='hard',
                  soft_update_tau=1e-2,
@@ -171,7 +172,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         self.target_update_interval = target_update_interval
         self.clip_delta = clip_delta
         self.phi = phi
-        self.phi_rnd = phi_rnd
+        self.phi_i = phi_i
         self.target_update_method = target_update_method
         self.soft_update_tau = soft_update_tau
         self.batch_accumulator = batch_accumulator
@@ -219,12 +220,13 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
                 'Replay start size cannot exceed '
                 'replay buffer capacity.')
 
+        self.n_action = n_action
         # RNDModelの定義
         self.rnd = rnd
 
         # Update normalization classの定義
-        self.obs_norm = UpdateMeanStd(shape=(1, 4, 84, 84))
-        self.r_norm = UpdateMeanStd()
+        self.obs_norm = UpdateMeanStd(shape=(4, 84, 84))
+        self.r_norm = UpdateMeanStdR()
 
         # observation正規化のチューニング期間
         self.pre_steps = pre_steps
@@ -280,7 +282,8 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             if errors_out is None:
                 errors_out = []
         loss = self._compute_loss(exp_batch, errors_out=errors_out)
-        loss_i = F.average(exp_batch['reward_i'])
+        loss_i = F.average(self._normalize_inst_r(exp_batch['reward_i']))
+        self.obs_norm.update(exp_batch['state_i'])
         if has_weight:
             self.replay_buffer.update_errors(errors_out)
 
@@ -326,7 +329,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         next_q_max = target_next_qout.max
 
         batch_rewards = exp_batch['reward']
-        batch_rewards_i = exp_batch['reward_i']
+        batch_rewards_i = self._normalize_inst_r(exp_batch['reward_i'])
         batch_terminal = exp_batch['is_state_terminal']
         discount = exp_batch['discount']
         discount_i = exp_batch['discount_i']
@@ -388,6 +391,10 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         else:
             return compute_value_loss(y, t, clip_delta=self.clip_delta,
                                       batch_accumulator=self.batch_accumulator)
+
+    def _normalize_inst_r(self, batch_r):
+        batch_r /= np.sqrt(self.r_norm.var)
+        return batch_r
 
     def act(self, obs):
         with chainer.using_config('train', False), chainer.no_backprop_mode():
@@ -611,6 +618,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             experiences: list of experiences. Each experience is a list
                 containing between 1 and n dicts containing
                   - state (object): State
+                  - state_i (object): 255で割ることなしのState
                   - action (object): Action
                   - reward (float): Reward
                   - is_state_terminal (bool): True iff next state is terminal
@@ -626,6 +634,8 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         batch_exp = {
             'state': batch_states(
                 [elem[0]['state'] for elem in experiences], xp, phi),
+            'state_i': batch_states(
+                [elem[0]['state'] for elem in experiences], xp, self.phi_i),
             'action': xp.asarray([elem[0]['action'] for elem in experiences]),
             'reward': xp.asarray([sum((gamma ** i) * exp[i]['reward']
                                       for i in range(len(exp)))
@@ -651,4 +661,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
             batch_exp['next_action'] = xp.asarray(
                 [elem[-1]['next_action'] for elem in experiences])
         return batch_exp
+
+    def phi_rnd(self, x):
+        return np.asarray(np.clip((x - self.obs_norm.mean)/np.sqrt(self.obs_norm.var), -5, 5), dtype=np.float32)
 

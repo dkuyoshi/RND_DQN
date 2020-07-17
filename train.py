@@ -86,7 +86,7 @@ def main():
                         help='Frequency at which agents are stored.')
     parser.add_argument('--dueling', action='store_true', default=False,
                         help='use dueling dqn')
-    parser.add_argument('--normalization_pre_steps', type=int, default=128,
+    parser.add_argument('--normalization_pre_steps', type=int, default=2,
                         help='steps for initializing the normalization parameters')
     parser.add_argument('no_rnd', action='store_true', default=False,
                         help='simple dqn training')
@@ -182,8 +182,9 @@ def main():
         # Feature extractor
         return np.asarray(x, dtype=np.float32) / 255
 
-    def phi_rnd(x):
-        return np.asarray(np.clip((x- np.average(x))/np.std(x), -5, 5), dtype=np.float32)
+    def phi_initial(x):
+        # Feature extractor
+        return np.asarray(x, dtype=np.float32)
 
     if not args.no_rnd:
         Agent = agents.DQN
@@ -204,8 +205,9 @@ def main():
                       update_interval=args.update_interval,
                       batch_accumulator='mean',
                       phi=phi,
-                      phi_rnd=phi_rnd,
-                      pre_steps=args.normalization_pre_steps)
+                      phi_i=phi_initial,
+                      pre_steps=args.normalization_pre_steps,
+                      n_action=n_actions,)
 
     if args.load:
         agent.load(args.load)
