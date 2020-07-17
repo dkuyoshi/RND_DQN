@@ -15,7 +15,7 @@ chainerrl==0.8.0
 chainer==7.4.0
 
 [chainerのgithub](https://github.com/chainer)
-## とりあえずエラーなくaction->updateは動いたぜ
+## とりあえずエラーなく動いたぜ
 ## TODO
 
 - [x] model
@@ -23,12 +23,12 @@ chainer==7.4.0
 - [x] target
 - [x] 報酬追加 <- target計算
 - [x] predictionのtrain
-- [ ] observation normalizationの正規化パラメータのチューニング期間をもうける
+- [x] observation normalizationの正規化パラメータのチューニング期間をもうける
 - [ ] pongで実験してみる
 - [ ] Montezuma's Revengeで実験してみる
 
 ## チューニングが厄介？
-- [ ] reward normalization : In order to keep the rewards on a consistent scale we normalized the intrinsic reward by dividing it by a running estimate of the standard deviations of the intrinsic returns.
+- [x] reward normalization : In order to keep the rewards on a consistent scale we normalized the intrinsic reward by dividing it by a running estimate of the standard deviations of the intrinsic returns.
 
 (報酬を一定のスケールに保つために、内部報酬の標準偏差の現在の推定値で割ることにより、内部報酬を正規化)
 - [x]  observation normalization : we whiten each dimension by subtracting the running mean and then dividing by the running standard deviation. We then clip the normalized observations to be between -5 and 5. We initialize the normalization parameters by stepping a random agent in the environment for a small number of steps before beginning optimization. We use the same observation normalization for both predictor and target networks but not the policy network.
@@ -45,6 +45,7 @@ chainer==7.4.0
 
 - --no_rnd : 普通のDQNでtrain(RNDを使用しない)
 - --dueling :　Dueling Networkを用いる
+- --gpu : デフォルトは-1(gpu使いたかったら0にする)
 
 
 
