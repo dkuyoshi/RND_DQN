@@ -1,4 +1,5 @@
 import chainer
+import numpy as np
 from chainer import Chain, Sequential, ChainList, Variable
 from chainer import links as L
 from chainer import functions as F
@@ -7,7 +8,7 @@ from chainerrl.action_value import DiscreteActionValue
 from chainerrl.q_function import StateQFunction
 from chainerrl.recurrent import RecurrentChainMixin
 from chainerrl.links import FactorizedNoisyLinear
-import numpy as np
+from chainer import cuda
 
 
 class CNN(Chain):
@@ -33,9 +34,14 @@ class CNN(Chain):
 
 
 class RNDModel(object):
-    def __init__(self, n_history=4, n_hidden=512):
+    def __init__(self, n_history=4, n_hidden=512, gpu=-1):
         self.target = CNN(n_history, n_hidden)
         self.predict = CNN(n_history, n_hidden)
+
+        if gpu < 0:
+            self.xp = np
+        else:
+            self.xp = cuda.cupy
 
     def get_instinct_reward(self, x):
         f_target = self.target(x)

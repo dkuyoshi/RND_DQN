@@ -143,7 +143,7 @@ def main():
     else:
         q_func = DQNQFunction(n_actions,)
 
-    rnd = RNDModel()
+    rnd = RNDModel(gpu=args.gpu)
     #rnd_func = rnd.predict
     if args.noisy_net_sigma is not None:
         links.to_factorized_noisy(q_func, sigma_scale=args.noisy_net_sigma)

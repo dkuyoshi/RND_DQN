@@ -329,7 +329,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         next_q_max = target_next_qout.max
 
         batch_rewards = exp_batch['reward']
-        batch_rewards_i = self._normalize_inst_r(exp_batch['reward_i'])
+        batch_rewards_i = self._normalize_inst_r(np.copy(exp_batch['reward_i']))
         batch_terminal = exp_batch['is_state_terminal']
         discount = exp_batch['discount']
         discount_i = exp_batch['discount_i']

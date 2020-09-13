@@ -42,15 +42,12 @@ def train_agent(agent, env, steps, outdir, checkpoint_freq=None,
     episode_len = 0
 
     # normalize obs
-    print('Start to initialize observation normalization parameter q(^_^)p ')
+    print('Initialize observation normalization parameter q(^_^)p ')
     for step in range(agent.pre_steps):
-        obs_no_stack = []
         action = np.random.randint(0, agent.n_action)
         obs, r, done, info = env.step(action)
-        # obs_no_stack.append(obs[3, :, :].reshape(1, 84, 84))
-        # obs = np.stack(obs_no_stack)
         agent.obs_norm.update(agent.batch_states([obs], agent.xp, agent.phi_i))
-    print('End to initialize !!(^_^)!! ')
+    print('End !!(^_^)!! ')
 
     try:
         while t < steps:
