@@ -225,7 +225,7 @@ class RNDAgent(agent.AttributeSavingMixin, agent.BatchAgent):
         self.rnd = rnd
 
         # Update normalization classの定義
-        self.obs_norm = UpdateMeanStd(shape=(4, 84, 84))
+        self.obs_norm = UpdateMeanStd(shape=(4, 84, 84), xp=self.xp)
         self.r_norm = UpdateMeanStdR()
 
         # observation正規化のチューニング期間

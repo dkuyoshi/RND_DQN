@@ -3,15 +3,16 @@ import numpy as np
 
 
 class UpdateMeanStd(object):
-    def __init__(self, epsilon=1e-7, shape=()):
-        self.mean = np.zeros(shape, 'float64')
-        self.var = np.ones(shape, 'float64')
+    def __init__(self, epsilon=1e-7, shape=(), xp=np):
+        self.xp = xp
+        self.mean = self.xp.zeros(shape, 'float64')
+        self.var = self.xp.ones(shape, 'float64')
         # zero割防止
         self.count = epsilon
 
     def update(self, x):
-        batch_mean = np.mean(x, axis=0)
-        batch_var = np.var(x, axis=0)
+        batch_mean = self.xp.mean(x, axis=0)
+        batch_var = self.xp.var(x, axis=0)
         batch_count = x.shape[0]
 
         delta = batch_mean - self.mean
