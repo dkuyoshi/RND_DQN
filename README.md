@@ -16,8 +16,6 @@ chainer==7.4.0
 
 [chainerのgithub](https://github.com/chainer)
 
-![Hyper](https://github.com/dkuyoshi/RND_DQN/blob/master/images/image.png "Hyperparameter for normalization")
-[Exploration by Random Network Distillation](https://arxiv.org/pdf/1810.12894.pdf)より引用
 
 
 ## Usage
