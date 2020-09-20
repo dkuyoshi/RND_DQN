@@ -86,9 +86,9 @@ def main():
                         help='Frequency at which agents are stored.')
     parser.add_argument('--dueling', action='store_true', default=False,
                         help='use dueling dqn')
-    parser.add_argument('--normalization_pre_steps', type=int, default=2,
+    parser.add_argument('--normalization_pre_steps', type=int, default=5*10**3,
                         help='steps for initializing the normalization parameters')
-    parser.add_argument('no_rnd', action='store_true', default=False,
+    parser.add_argument('--no_rnd', action='store_true', default=False,
                         help='simple dqn training')
     args = parser.parse_args()
 
